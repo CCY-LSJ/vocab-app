@@ -1,189 +1,177 @@
-/* ocr.js - Tesseract.js OCR with preloading */
+/* ocr.js - Baidu OCR via CORS proxy */
 (function() {
   'use strict';
 
-  var worker = null;
-  var state = 'idle'; // idle | loading | ready | error
-  var pendingResolvers = [];
-  var pendingRejecters = [];
+  var state = 'ready';
+  var accessToken = null;
+  var tokenExpiry = 0;
+
+  var API_KEY = 'UIvmY7Qbb5HDpjl4t1yCO6H6';
+  var SECRET_KEY = 'r7ARzJbV60FyKtvGeE7jzJ7RJCAeYWiY';
+
+  // CORS proxy - makes cross-origin requests possible
+  var CORS_PROXY = 'https://corsproxy.io/?';
 
   function updateStatus(msg, isError) {
-    // Update the banner at top of page
     var banner = document.getElementById('ocr-engine-banner');
     var statusEl = document.getElementById('ocr-engine-status');
     if (banner && statusEl) {
       statusEl.textContent = msg;
       if (isError) {
-        banner.style.background = '#FFEBEE';
-        banner.style.color = '#C62828';
-      } else if (state === 'ready') {
-        banner.style.background = '#E8F5E9';
-        banner.style.color = '#2E7D32';
-        // Auto-hide after 3 seconds
-        setTimeout(function() {
-          banner.style.display = 'none';
-        }, 3000);
+        banner.style.background = '#FFEBEE'; banner.style.color = '#C62828';
       } else {
-        banner.style.background = '#FFF3E0';
-        banner.style.color = '#E65100';
+        banner.style.background = '#E8F5E9'; banner.style.color = '#2E7D32';
+        setTimeout(function() { banner.style.display = 'none'; }, 3000);
       }
       banner.style.display = 'block';
     }
-    // Also update the progress text in result panel
     var progressEl = document.getElementById('ocr-progress');
-    if (progressEl) {
-      progressEl.textContent = msg;
-    }
+    if (progressEl) progressEl.textContent = msg;
   }
 
-  function resolveAll() {
-    var resolvers = pendingResolvers;
-    pendingResolvers = [];
-    pendingRejecters = [];
-    resolvers.forEach(function(r) { r(worker); });
-  }
-
-  function rejectAll(err) {
-    var rejecters = pendingRejecters;
-    pendingResolvers = [];
-    pendingRejecters = [];
-    rejecters.forEach(function(r) { r(err); });
-  }
-
-  // Preload the OCR engine - call this at app startup
   function preload() {
-    if (state === 'ready') {
-      return Promise.resolve(worker);
-    }
-    if (state === 'loading') {
-      return new Promise(function(resolve, reject) {
-        pendingResolvers.push(resolve);
-        pendingRejecters.push(reject);
-      });
-    }
-    if (state === 'error') {
-      // Retry on error
-      state = 'idle';
-    }
-
-    state = 'loading';
-    updateStatus('正在加载 OCR 引擎...');
-
-    // Create worker with SIMD for better performance
-    try {
-      worker = Tesseract.createWorker('eng', 1, {
-        logger: function(m) {
-          if (m.status === 'loading tesseract core') {
-            updateStatus('加载核心引擎 (' + Math.round((m.progress || 0) * 100) + '%)');
-          } else if (m.status === 'initializing tesseract') {
-            updateStatus('初始化引擎...');
-          } else if (m.status === 'loading language traineddata') {
-            updateStatus('下载英文语言包 (' + Math.round((m.progress || 0) * 100) + '%)');
-          } else if (m.status === 'initializing api') {
-            updateStatus('初始化 API...');
-          } else if (m.status === 'recognizing text') {
-            updateStatus('识别中... ' + Math.round((m.progress || 0) * 100) + '%');
-          }
-        }
-      });
-    } catch (e) {
-      state = 'error';
-      updateStatus('OCR 引擎初始化失败', true);
-      rejectAll(e);
-      return Promise.reject(e);
-    }
-
-    return worker.then(function(w) {
-      worker = w;
-      state = 'ready';
-      updateStatus('OCR 引擎就绪');
-      resolveAll();
-      return w;
-    }).catch(function(err) {
-      console.error('OCR preload error:', err);
-      state = 'error';
-      updateStatus('OCR 加载失败，请检查网络后刷新页面', true);
-      worker = null;
-      rejectAll(err);
-      throw err;
-    });
+    updateStatus('百度 OCR 就绪');
+    return Promise.resolve();
   }
 
-  // Extract words from OCR text
-  function extractWords(text) {
-    if (!text) return [];
+  // Get Baidu access_token (cached for 29 days)
+  function getAccessToken() {
+    if (accessToken && Date.now() < tokenExpiry) {
+      return Promise.resolve(accessToken);
+    }
 
-    var wordItems = [];
-    var tokens = text.split(/[\s,.;:!?()\[\]{}""''<>\/\\|@#$%^&*+=~`\u3000-\u303F\u2000-\u206F]+/);
+    updateStatus('正在获取授权...');
 
-    var seen = {};
-    tokens.forEach(function(token) {
-      token = token.trim();
-      if (token.length >= 2 && /^[a-zA-Z][a-zA-Z-]*[a-zA-Z]$/.test(token)) {
-        var lower = token.toLowerCase();
-        if (!seen[lower]) {
-          seen[lower] = true;
-          wordItems.push({
-            word: token,
-            meaning: detectAdjacentChinese(token, text),
-            selected: true
-          });
-        }
+    var url = CORS_PROXY + encodeURIComponent(
+      'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials' +
+      '&client_id=' + API_KEY +
+      '&client_secret=' + SECRET_KEY
+    );
+
+    return fetch(url).then(function(r) {
+      return r.json();
+    }).then(function(data) {
+      if (data.access_token) {
+        accessToken = data.access_token;
+        tokenExpiry = Date.now() + (29 * 24 * 60 * 60 * 1000);
+        return accessToken;
       }
+      throw new Error('获取授权失败：' + (data.error_description || JSON.stringify(data)));
     });
-
-    return wordItems;
   }
 
-  function detectAdjacentChinese(word, fullText) {
-    var idx = fullText.toLowerCase().indexOf(word.toLowerCase());
-    if (idx === -1) return '';
-
-    var after = fullText.substring(idx + word.length, idx + word.length + 100);
-    var chineseMatch = after.match(/[\u4e00-\u9fff\u3400-\u4dbf]{2,30}/);
-    if (chineseMatch) return chineseMatch[0].trim();
-
-    var before = fullText.substring(Math.max(0, idx - 50), idx);
-    var chineseBefore = before.match(/[\u4e00-\u9fff\u3400-\u4dbf]{2,30}/);
-    if (chineseBefore) return chineseBefore[chineseBefore.length - 1].trim();
-
-    return '';
-  }
-
-  function imageToInput(imageElement) {
+  // Convert image to base64
+  function imageToBase64(imageElement) {
     var canvas = document.createElement('canvas');
     canvas.width = imageElement.naturalWidth || imageElement.width;
     canvas.height = imageElement.naturalHeight || imageElement.height;
     var ctx = canvas.getContext('2d');
     ctx.drawImage(imageElement, 0, 0);
-    return canvas;
+    return canvas.toDataURL('image/jpeg', 0.75);
   }
 
-  // Main OCR - now uses preloaded worker
+  // Call Baidu OCR
   function doOCR(imageElement) {
-    var input = imageToInput(imageElement);
+    updateStatus('正在上传图片...');
 
-    // Ensure worker is preloaded
-    return preload().then(function(w) {
-      return w.recognize(input);
+    var imageData = imageToBase64(imageElement);
+    var cleanBase64 = imageData.replace(/^data:image\/\w+;base64,/, '');
+
+    return getAccessToken().then(function(token) {
+      updateStatus('正在识别文字...');
+
+      var formData = new URLSearchParams();
+      formData.append('access_token', token);
+      formData.append('image', cleanBase64);
+      formData.append('language_type', 'CHN_ENG');
+      formData.append('detect_direction', 'false');
+      formData.append('paragraph', 'false');
+      formData.append('probability', 'false');
+
+      var proxyUrl = CORS_PROXY + encodeURIComponent(
+        'https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic'
+      );
+
+      return fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+    }).then(function(r) {
+      return r.json();
     }).then(function(result) {
-      return extractWords(result.data.text);
+      if (result.error_code) {
+        throw new Error(result.error_msg || '识别失败');
+      }
+      updateStatus('识别完成');
+      return parseResults(result);
+    }).catch(function(err) {
+      updateStatus('识别失败：' + (err.message || '网络错误'), true);
+      throw err;
     });
   }
 
-  function getState() {
-    return state;
+  // Parse Baidu OCR results into word list
+  function parseResults(ocrResult) {
+    var words = [];
+    var seen = {};
+
+    if (!ocrResult.words_result || !Array.isArray(ocrResult.words_result)) {
+      return words;
+    }
+
+    ocrResult.words_result.forEach(function(item) {
+      var text = (item.words || '').trim();
+      if (!text) return;
+
+      var tokens = text.split(/[\s,.;:!?()\[\]{}""''<>\/\\|@#$%^&*+=~`\u3000-\u303F\u2000-\u206F]+/);
+
+      tokens.forEach(function(token) {
+        token = token.trim();
+        if (token.length < 2 || !/^[a-zA-Z][a-zA-Z-]*[a-zA-Z]$/.test(token)) return;
+
+        var lower = token.toLowerCase();
+        if (seen[lower]) return;
+
+        if (isLikelyWord(token)) {
+          seen[lower] = true;
+          words.push({
+            word: token,
+            meaning: detectAdjacentChinese(token, text),
+            selected: true
+          });
+        }
+      });
+    });
+
+    return words;
   }
 
-  function terminateWorker() {
-    if (worker && state === 'ready') {
-      try { worker.terminate(); } catch(e) {}
-      worker = null;
-    }
-    state = 'idle';
-    pendingResolvers = [];
-    pendingRejecters = [];
+  function isLikelyWord(word) {
+    var lower = word.toLowerCase();
+    var shortWords = 'a,an,the,is,am,are,was,were,be,been,being,have,has,had,do,does,did,will,would,can,could,may,might,must,i,me,my,we,us,our,you,he,she,it,they,him,her,his,its,their,this,that,these,those,no,not,yes,if,so,or,and,but,yet,for,nor,to,in,on,at,by,of,from,with,as,up,out,off,go,get,put,set,let,run,use,say';
+    if (shortWords.split(',').indexOf(lower) >= 0) return true;
+    if (word.length < 3) return false;
+    if (word.length <= 4 && /^[A-Z]+$/.test(word)) return false;
+    if (word.length <= 3 && /[a-z][A-Z]/.test(word)) return false;
+    if (word.length >= 4 && !/[aeiou]/i.test(word)) return false;
+    if (/[bcdfghjklmnpqrstvwxyz]{4}/i.test(word)) return false;
+    return true;
   }
+
+  function detectAdjacentChinese(word, fullText) {
+    var idx = fullText.toLowerCase().indexOf(word.toLowerCase());
+    if (idx === -1) return '';
+    var after = fullText.substring(idx + word.length, idx + word.length + 100);
+    var m = after.match(/[\u4e00-\u9fff\u3400-\u4dbf]{2,30}/);
+    if (m) return m[0].trim();
+    var before = fullText.substring(Math.max(0, idx - 50), idx);
+    var m2 = before.match(/[\u4e00-\u9fff\u3400-\u4dbf]{2,30}/);
+    if (m2) return m2[m2.length - 1].trim();
+    return '';
+  }
+
+  function getState() { return state; }
 
   window.VocabOCR = {
     preload: preload,
@@ -195,33 +183,26 @@
       var canvas = document.createElement('canvas');
       var imgW = imageElement.naturalWidth || imageElement.width;
       var imgH = imageElement.naturalHeight || imageElement.height;
-      canvas.width = imgW;
-      canvas.height = imgH;
+      canvas.width = imgW; canvas.height = imgH;
       var ctx = canvas.getContext('2d');
       ctx.drawImage(imageElement, 0, 0);
 
       var scaleX = canvas.width / imageElement.width;
       var scaleY = canvas.height / imageElement.height;
-      var x = rangeRect.x * scaleX;
-      var y = rangeRect.y * scaleY;
-      var w = rangeRect.w * scaleX;
-      var h = rangeRect.h * scaleY;
-
+      var x = rangeRect.x * scaleX, y = rangeRect.y * scaleY;
+      var w = rangeRect.w * scaleX, h = rangeRect.h * scaleY;
       var padding = 30;
-      x = Math.max(0, x - padding);
-      y = Math.max(0, y - padding);
+      x = Math.max(0, x - padding); y = Math.max(0, y - padding);
       w = Math.min(canvas.width - x, w + padding * 2);
       h = Math.min(canvas.height - y, h + padding * 2);
 
       var cropCanvas = document.createElement('canvas');
-      cropCanvas.width = w;
-      cropCanvas.height = h;
+      cropCanvas.width = w; cropCanvas.height = h;
       var cropCtx = cropCanvas.getContext('2d');
       cropCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
 
       return doOCR(cropCanvas);
     },
-    extractWords: extractWords,
-    terminate: terminateWorker
+    terminate: function() {}
   };
 })();

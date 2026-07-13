@@ -94,6 +94,19 @@
       <div class="loading-spinner"></div>
       <span>正在识别...</span>
     </div>
+    <!-- 原始识别文本 -->
+    <div class="raw-text-section" id="raw-text-section" style="display:none">
+      <div class="raw-text-header" style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;">
+        <span style="font-weight:600;font-size:0.78rem;color:#666;">📄 识别原文（点击可展开）</span>
+        <button class="btn-text" id="btn-toggle-raw" style="font-size:0.7rem;">展开</button>
+      </div>
+      <div class="raw-text-list" id="raw-text-list" style="display:none;max-height:140px;overflow-y:auto;background:#f9f9f9;border-radius:6px;padding:8px 12px;margin:0 12px 8px;font-size:0.78rem;color:#555;line-height:1.8;white-space:pre-wrap;border:1px solid #eee;"></div>
+    </div>
+    <!-- 手动添加 -->
+    <div class="manual-add-row" id="manual-add-row" style="display:flex;gap:8px;padding:8px 12px;">
+      <input type="text" id="manual-add-input" placeholder="手动输入遗漏的单词..." style="flex:1;padding:8px 10px;border:1px solid #E8E4DC;border-radius:8px;font-size:0.85rem;outline:none;">
+      <button class="btn btn-secondary" id="btn-manual-add-word" style="padding:8px 14px;white-space:nowrap;">+ 添加</button>
+    </div>
     <div class="result-list" id="result-list"></div>
     <div class="result-footer">
       <button class="btn btn-secondary" id="btn-recapture">重新拍照</button>
@@ -154,12 +167,10 @@
     </div>
   </div>
 
-  <!-- Progress bar -->
   <div class="progress-bar" id="review-progress-bar" style="display:none">
     <div class="progress-fill" id="review-progress-fill"></div>
   </div>
 
-  <!-- Flashcard area -->
   <div class="flashcard-container" id="flashcard-container">
     <div class="empty-state" id="review-empty">
       <div class="empty-icon">🎉</div>
@@ -168,13 +179,11 @@
     </div>
   </div>
 
-  <!-- Review controls -->
   <div class="review-controls" id="review-controls" style="display:none">
     <button class="btn btn-review forgot" id="btn-forgot">😐 不认识</button>
     <button class="btn btn-review know" id="btn-know">✅ 认识</button>
   </div>
 
-  <!-- Review complete -->
   <div class="review-complete" id="review-complete" style="display:none">
     <div class="complete-icon">🎉</div>
     <h3>今日复习完成！</h3>
@@ -210,7 +219,7 @@
   <div class="settings-section">
     <h3>关于</h3>
     <div class="about-info">
-      <p>考研单词本 v1.0</p>
+      <p>考研单词本 v1.1</p>
       <p>基于艾宾浩斯记忆曲线的拍照取词背单词工具</p>
       <p>所有数据存储在本地浏览器，不上传服务器</p>
     </div>

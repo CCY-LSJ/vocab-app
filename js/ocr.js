@@ -1,20 +1,21 @@
-/* ocr.js - Baidu OCR via local proxy (no CORS issues) */
+/* ocr.js - 百度 OCR 代理调用 + 手动编辑支持 */
 (function() {
   'use strict';
 
   var state = 'ready';
+  var lastRawTexts = []; // 保存最近一次原始识别文本
+
   function updateStatus(msg, isError) {
     var banner = document.getElementById('ocr-engine-banner');
     var statusEl = document.getElementById('ocr-engine-status');
     if (banner && statusEl) {
       statusEl.textContent = msg;
-      if (isError) {
-        banner.style.background = '#FFEBEE'; banner.style.color = '#C62828';
-      } else {
-        banner.style.background = '#E8F5E9'; banner.style.color = '#2E7D32';
-        setTimeout(function() { banner.style.display = 'none'; }, 3000);
-      }
+      banner.style.background = isError ? '#FFEBEE' : '#E8F5E9';
+      banner.style.color = isError ? '#C62828' : '#2E7D32';
       banner.style.display = 'block';
+      if (!isError) {
+        setTimeout(function() { banner.style.display = 'none'; }, 4000);
+      }
     }
     var progressEl = document.getElementById('ocr-progress');
     if (progressEl) progressEl.textContent = msg;
@@ -56,9 +57,12 @@
     }).then(function(result) {
       if (result.error) throw new Error(result.error);
       if (result.success && result.words) {
+        // 保存原始文本
+        lastRawTexts = result.rawTexts || [];
         updateStatus('识别完成，共 ' + result.words.length + ' 个单词');
         return result.words;
       }
+      lastRawTexts = [];
       return [];
     }).catch(function(err) {
       updateStatus('识别失败：' + (err.message || '网络错误'), true);
@@ -68,9 +72,13 @@
 
   function getState() { return state; }
 
+  // 获取最近一次原始识别文本
+  function getLastRawTexts() { return lastRawTexts; }
+
   window.VocabOCR = {
     preload: preload,
     getState: getState,
+    getLastRawTexts: getLastRawTexts,
     processFullImage: function(imageElement) { return doOCR(imageElement); },
     processFixedRange: function(imageElement, rangeRect) {
       var canvas = document.createElement('canvas');

@@ -10,9 +10,14 @@
 <link rel="manifest" href="manifest.json">
 <title>考研单词本</title>
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
+
+<!-- OCR engine status -->
+<div id="ocr-engine-banner" style="display:none;background:#FFF3E0;color:#E65100;text-align:center;padding:6px 12px;font-size:0.75rem;position:sticky;top:0;z-index:100;">
+  <span id="ocr-engine-status">OCR 引擎加载中...</span>
+</div>
 
 <!-- ===== TAB BAR ===== -->
 <nav class="tab-bar">
@@ -221,7 +226,6 @@
 <!-- ===== TOAST ===== -->
 <div class="toast" id="toast" style="display:none"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/ocr.js"></script>
 <script src="js/review.js"></script>

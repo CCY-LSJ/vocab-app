@@ -783,6 +783,13 @@
 
   // ===== INIT =====
   updateBadge();
+
+  // Preload OCR engine immediately at startup
+  // This way the 10MB+ worker files download while user is browsing
+  VocabOCR.preload().catch(function(err) {
+    console.log('OCR preload deferred:', err.message);
+  });
+
   switchTab('capture');
 
   // Handle page visibility (stop camera when hidden)

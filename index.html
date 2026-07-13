@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2B5797">
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>考研单词本</title>
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -226,6 +226,8 @@
 <!-- ===== TOAST ===== -->
 <div class="toast" id="toast" style="display:none"></div>
 
+<!-- Tesseract.js CDN - loaded at bottom so page content renders first -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/ocr.js"></script>
 <script src="js/review.js"></script>

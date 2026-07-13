@@ -1,0 +1,22 @@
+{
+  "name": "考研单词本",
+  "short_name": "单词本",
+  "description": "基于艾宾浩斯记忆曲线的拍照取词背单词工具",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F3EF",
+  "theme_color": "#2B5797",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -582,6 +582,11 @@
     // Check if word exists in built-in
     hasBuiltin: function(word) {
       return lookupBuiltin(word) !== null;
+    },
+
+    // Get all words from built-in dictionary - used by OCR for filtering
+    getAllWords: function() {
+      return Object.keys(BUILTIN);
     }
   };
 })();

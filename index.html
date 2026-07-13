@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2B5797">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>考研单词本</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -193,10 +192,10 @@
   <div class="settings-section">
     <h3>OCR 识别引擎</h3>
     <div class="about-info">
-      <p>使用 Tesseract.js 浏览器端 OCR</p>
-      <p>无需配置 API Key，完全免费</p>
-      <p>首次识别需加载引擎（约 5-10 秒）</p>
-      <p>后续识别速度更快</p>
+      <p>使用百度 OCR 云端识别</p>
+      <p>识别准确率 99%+，支持中英混排</p>
+      <p>每月免费 1000 次，个人使用完全够用</p>
+      <p>识别速度 1-2 秒，无需等待加载</p>
     </div>
   </div>
 
@@ -226,8 +225,6 @@
 <!-- ===== TOAST ===== -->
 <div class="toast" id="toast" style="display:none"></div>
 
-<!-- Tesseract.js CDN - loaded at bottom so page content renders first -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/ocr.js"></script>
 <script src="js/review.js"></script>

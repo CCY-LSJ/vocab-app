@@ -1,5 +1,6 @@
-/* sw.js - Service Worker with CDN caching */
-var CACHE_NAME = 'vocab-app-v2';
+/* sw.js - Service Worker for PWA offline support */
+var CACHE_NAME = 'vocab-app-v3';
+// Only cache local assets eagerly - CDN files are large and cached lazily
 var ASSETS = [
   './',
   'index.html',
@@ -9,24 +10,18 @@ var ASSETS = [
   'js/review.js',
   'js/dict.js',
   'js/app.js',
-  'manifest.json',
-  // Tesseract.js CDN files (cached for offline/fast reload)
-  'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
-  'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core.wasm.js',
-  'https://cdn.jsdelivr.net/npm/tesseract.js-data-eng@4.0.0/eng.traineddata'
+  'manifest.json'
 ];
 
-// Install - cache all assets
+// Install - cache local assets only
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      // Cache local assets eagerly
       return cache.addAll(ASSETS).catch(function(err) {
         console.log('SW: some assets failed to cache, will retry on fetch', err);
       });
     })
   );
-  // Activate immediately
   self.skipWaiting();
 });
 
@@ -44,37 +39,34 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-// Fetch - cache-first for local, network-first for CDN
+// Fetch - stale-while-revalidate for CDN, network-first for local
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
 
-  // For CDN resources (Tesseract.js), use cache-first strategy
+  // For CDN resources (Tesseract.js), use stale-while-revalidate
   if (url.includes('cdn.jsdelivr.net') || url.includes('unpkg.com')) {
     event.respondWith(
-      caches.match(event.request).then(function(cached) {
-        if (cached) return cached;
-        return fetch(event.request).then(function(response) {
-          if (response && response.status === 200) {
-            var clone = response.clone();
-            caches.open(CACHE_NAME).then(function(cache) {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        }).catch(function() {
-          // Offline - return cached if available
-          return cached || new Response('Network error', { status: 408 });
+      caches.open(CACHE_NAME).then(function(cache) {
+        return cache.match(event.request).then(function(cached) {
+          var fetchPromise = fetch(event.request).then(function(response) {
+            if (response && response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          });
+          // Return cached immediately, update in background
+          return cached || fetchPromise;
         });
       })
     );
     return;
   }
 
-  // For local assets, use cache-first with network fallback
+  // For local assets, cache-first with network update
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) {
-        // Return cached immediately, update cache in background
+        // Update cache in background
         fetch(event.request).then(function(response) {
           if (response && response.status === 200) {
             caches.open(CACHE_NAME).then(function(cache) {
